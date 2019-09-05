@@ -1,0 +1,448 @@
+#define _CRT_SECURE_NO_WARNINGS
+
+
+#include <windows.h>
+#include <iostream> 
+#include <fstream> 
+#include <Lmcons.h>
+#include <ctime>
+#include <stdio.h>
+#include <atlbase.h>
+#include <commctrl.h>
+#include <string> 
+#include <locale>
+#include <atlstr.h>
+
+
+
+#define IDC_MONTHCAL 10100000
+
+#define ID_MYBUTTON 1    /* идентификатор для кнопки внутри главного окна */
+
+LRESULT CALLBACK MainWinProc(HWND, UINT, WPARAM, LPARAM);
+LRESULT CALLBACK DialogWinProc(HWND, UINT, WPARAM, LPARAM);
+
+bool windowHasFocus = true;
+
+int ascii_cod(char x)
+{
+	int a;
+	a = x;
+	return a;
+}
+
+int WINAPI WinMain(HINSTANCE hInst, HINSTANCE, LPSTR, int ss) {
+
+	//получение размеров окна
+	RECT desktop;
+	long horizontal;
+	const HWND hDesktop = GetDesktopWindow();
+	GetWindowRect(hDesktop, &desktop);
+	TCHAR str[256];
+	TCHAR str_plantDate[256];
+
+	/*if (desktop.right < 1920)
+	{
+		horizontal = desktop.right / 2 - 200;
+	}
+	else
+	{*/
+	horizontal = desktop.right / 8; //- 200;
+	//
+
+
+	keybd_event(VK_LWIN, 0, 0, 0);
+	keybd_event('D', 0, 0, 0);
+	keybd_event('D', 0, KEYEVENTF_KEYUP, 0);
+	keybd_event(VK_LWIN, 0, KEYEVENTF_KEYUP, 0);
+
+	
+	/* создаем и регистрируем класс главного окна */
+	WNDCLASS wc;
+	//wc.style = 0;
+	wc.style = CS_NOCLOSE;
+	wc.lpfnWndProc = MainWinProc;
+	wc.cbClsExtra = wc.cbWndExtra = 0;
+	wc.hCursor = LoadCursor(NULL, IDC_ARROW);
+	wc.hInstance = hInst;
+	wc.hIcon = NULL;
+	wc.hCursor = NULL;
+	wc.hbrBackground = (HBRUSH)(COLOR_BACKGROUND + 1);
+	wc.lpszMenuName = NULL;
+	wc.lpszClassName = "Тестовое окно";
+	if (!RegisterClass(&wc)) return FALSE;
+
+
+	WNDCLASS wc1;
+	//wc1.style = 0;
+	wc1.style = CS_NOCLOSE;
+	wc1.lpfnWndProc = DialogWinProc;
+	wc1.cbClsExtra = wc1.cbWndExtra = 0;
+	wc1.hCursor = LoadCursor(NULL, IDC_ARROW);
+	wc1.hInstance = hInst;
+	wc1.hIcon = NULL;
+	wc1.hCursor = NULL;
+	wc1.hbrBackground = (HBRUSH)(COLOR_WINDOW + 1);
+	wc1.lpszMenuName = NULL;
+	wc1.lpszClassName = "Диалоговое окно";
+	if (!RegisterClass(&wc1)) return FALSE;
+
+	//создание главного (черного) окна
+	HWND hMainWnd = CreateWindowEx(
+		WM_ACTIVATEAPP | WS_EX_TOPMOST,"Тестовое окно",
+		"Тест",
+		WS_OVERLAPPED | WS_POPUP ,
+		0,0,
+		5000, 2000,
+		NULL,
+		NULL,
+		hInst,
+		NULL
+	);
+
+	//позиция поверх всех окон
+	SetWindowPos(
+		_In_ hMainWnd,
+		_In_opt_  HWND_TOPMOST,
+		_In_ 0,
+		_In_ 0,
+		_In_ 5000,
+		_In_ 2000,
+		_In_ SWP_NOMOVE | SWP_NOSIZE);
+
+	//SetForegroundWindow(hMainWnd);
+
+	//создание диалогового окна
+	HWND hWnd = CreateWindowEx(WS_EX_CLIENTEDGE | WM_ACTIVATEAPP,
+		"Диалоговое окно", "Test program",
+		WS_CHILD | WS_OVERLAPPED | WS_POPUP,
+		desktop.right / 4, //(GetSystemMetrics(SM_CXSCREEN) - 1024) / 2,
+		0,//desktop.bottom / 4,//(GetSystemMetrics(SM_CYSCREEN) - 768) / 2, //точка
+		desktop.right - (desktop.right / 2),//1024, 
+		desktop.bottom,//desktop.bottom - (desktop.bottom / 2),//576, 
+		NULL, NULL, hInst, NULL);
+	SetForegroundWindow(hWnd); 
+	//отображение окон
+	if (!hMainWnd) return FALSE;
+	ShowWindow(hMainWnd, ss);
+	UpdateWindow(hMainWnd);
+
+	if (!hWnd) return FALSE;
+	ShowWindow(hWnd, ss);
+	UpdateWindow(hWnd);
+
+	EnableWindow(hMainWnd, FALSE); //блокиовка главного окна
+
+
+	ShowWindow(FindWindow(TEXT("Shell_TrayWnd"), NULL), SW_HIDE);
+	ShowWindow(FindWindow(TEXT("Button"), NULL), SW_HIDE);
+
+	MSG msg; // цикл обработки событий 
+	while (GetMessage(&msg, NULL, 0, 0)) {
+		TranslateMessage(&msg);
+		DispatchMessage(&msg);
+	}
+	return msg.wParam;
+
+	
+}
+
+
+
+
+
+// процедура обработки сообщений для главного окна 
+LRESULT CALLBACK MainWinProc(HWND hw, UINT msg, WPARAM wp, LPARAM lp) {
+	switch (msg) {}
+
+	return DefWindowProc(hw, msg, wp, lp);
+}
+
+
+
+
+// процедура обработки сообщений для диалогового окна 
+LRESULT CALLBACK DialogWinProc(HWND hWnd, UINT msg, WPARAM wp1, LPARAM lp1) {
+	//RECT rc;
+	RECT rect;
+	RECT rect1;
+	TCHAR* path = new TCHAR[45];
+	_tcscpy(path, _T("Hello"));
+	int horizontal_edit;
+	HDC hdc;
+	HDC dc = GetDC(hWnd);
+	HINSTANCE hInst;
+	PAINTSTRUCT ps;
+	static HWND hBtn;
+	static HWND hEdt;
+	static HWND hEdtDate;
+	static HWND hMonthCal;
+	//bool windowHasFocus = true;
+
+	//получение размеров окна
+	RECT desktop;
+	RECT rc;
+	long horizontal;
+	long vertical;
+	const HWND hDesktop = GetDesktopWindow();
+	GetWindowRect(hDesktop, &desktop);
+	TCHAR str[256];
+	TCHAR str_plantDate[256];
+
+	/*if (desktop.right < 1920)
+	{
+		horizontal = desktop.right / 2 - 200;
+	}
+	else
+	{*/
+	horizontal = desktop.right / 4; //- 200;
+	vertical = desktop.bottom/4;
+	//
+
+	//имя пользователя
+	char username[UNLEN + 1];
+	DWORD username_len = UNLEN + 1;
+	GetUserName(username, &username_len);
+
+	LPCSTR stOutText = "1. Зачем это надо? \r\n Чтобы руководитель  ПГ понимал, чем вы заняты и какие перспективы \r\n у задачи, которой вы занимаетесь. \r\n \r\n 2. А это зачем надо?   \r\n Чтобы увидеть, что, допустим, кто-то дал вам другую, более срочную задачу \r\n или что вы сегодня оцениваете срок завершения менее оптимистично.  \r\n \r\n 3. Что мне будет, если я изменю свой прогноз на выполнение задачи?   \r\n Руководитель оценит насколько требуется его внимание и, \r\n при необходимости, обсудит с вами ситуацию.";
+	rect.left = 50;
+	rect.top = 50;
+	rect.right = 600;
+	rect.bottom = 600;
+
+
+	LPCSTR stOutText1 = "Пожалуйста, \r\n 1. В ответе на первый вопрос пишите только точное название задачи \r\n (желательно, как она отражена в файле Загрузка ПГ). \r\n \r\n 2. В ответе на второй вопрос дату в формате АА.ВВ,  т.е. 25.09, например";	
+	rect1.left = 50;
+	rect1.top = 250;
+	rect1.right = 600;
+	rect1.bottom = 600;
+	/*//вчерашняя дата
+	char time_yes[28];
+	struct tm newtime;
+	time_t aclock = time(nullptr);
+	time(&aclock);
+	aclock -= 24 * 60 * 60;
+	localtime_s(&newtime, &aclock);
+	strftime(time_yes, sizeof(time_yes), " %d.%m.%Y", &newtime);*/
+
+	//текущая дата
+	char date[32];
+	time_t a = time(nullptr);
+	struct tm time_info;
+	localtime_s(&time_info, &a);
+	strftime(date, sizeof(date), " %d.%m.%Y", &time_info);
+
+	//текущее время
+	char time_now[32];
+	time_t b = time(nullptr);
+	struct tm time_info1;
+	localtime_s(&time_info1, &b);
+	strftime(time_now, sizeof(time_now), " %H:%M:%S", &time_info1);
+
+
+	std::string time_n = std::string(date);
+	//std::string yes_time = std::string(time_yes);
+
+
+
+	//удаление пробелов из даты
+	for (int i = 0; i < time_n.length(); i++) {
+		if (time_n[i] == ' ') time_n.erase(i, 1);
+	}
+
+	//проверка на наличие файла 
+	std::string adress_check = "C:\\dst\\";
+	std::string format_check = ".txt";
+	std::string s1 = adress_check + time_n + format_check;
+	std::ifstream f1(s1);
+
+	//если файл сегодня создавался - прерывание
+	if (f1.is_open() == true)
+	{
+		ShowWindow(FindWindow(TEXT("Shell_TrayWnd"), NULL), SW_SHOW);
+		ShowWindow(FindWindow(TEXT("Button"), NULL), SW_SHOW);
+
+
+		exit(0);
+	}
+
+
+	switch (msg) {
+	case WM_CREATE:
+		/*keybd_event(VK_LWIN, 0, 0, 0);
+		keybd_event('D', 0, 0, 0);
+		keybd_event('D', 0, KEYEVENTF_KEYUP, 0);
+		keybd_event(VK_LWIN, 0, KEYEVENTF_KEYUP, 0);*/
+
+
+
+		hInst = ((LPCREATESTRUCT)lp1)->hInstance;
+		//создание текстового многострочного поля
+		hEdt = CreateWindowEx(WS_EX_CLIENTEDGE | WM_ACTIVATEAPP, "Edit", "", WS_CHILD | WS_VISIBLE | ES_LEFT | ES_MULTILINE | WM_KEYDOWN,
+			desktop.right / 8,///horizontal + (horizontal / 2),
+			desktop.bottom / 2,//desktop.bottom / 8,//(GetSystemMetrics(SM_CYSCREEN) - 700) / 2,
+			desktop.right - ((horizontal + (horizontal / 2)) * 2),//400, 
+			desktop.bottom / 4,//230,
+			hWnd, (HMENU)10000, NULL, NULL);
+		ShowWindow(hEdt, SW_SHOWNORMAL);
+		//SetForegroundWindow(hEdt);
+		//Поле для даты
+		hEdtDate = CreateWindowEx(0, DATETIMEPICK_CLASS, "", WS_BORDER | WS_CHILD | WS_VISIBLE | DTS_SHORTDATECENTURYFORMAT,
+			desktop.right / 8,
+			desktop.bottom / 2 + desktop.bottom / 4 + 50,//(desktop.bottom / 8) + (desktop.bottom / 4) + 60 ,//(GetSystemMetrics(SM_CYSCREEN) - 600),
+			desktop.right - ((horizontal + (horizontal / 2)) * 2),//400, 
+			25,
+			hWnd, (HMENU)1000000, NULL, NULL);
+		ShowWindow(hEdtDate, SW_SHOWNORMAL);
+		GetWindowRect(hEdt, &rc);
+		//SetForegroundWindow(hEdtDate);
+		//Кнопка
+		CreateWindow("button", "Отправить", WS_CHILD | BS_PUSHBUTTON | WS_VISIBLE,
+			horizontal - 50,//(GetSystemMetrics(SM_CXSCREEN) - 1024 - 50) / 2,
+			desktop.bottom / 2 + desktop.bottom / 4 + 80,//(desktop.bottom / 8) + (desktop.bottom / 4) + 100,
+			//(GetSystemMetrics(SM_CYSCREEN) - 64) / 2,
+			100, 20, hWnd, (HMENU)ID_MYBUTTON,
+			NULL, NULL);
+		//MessageBoxA(hWnd, LPCTSTR(horizontal) , "Текст закрытия", MB_OK);
+	case WM_CTLCOLOREDIT:
+		SetBkColor((HDC)wp1, GetSysColor(COLOR_3DLIGHT));
+		return  (LRESULT)GetSysColorBrush(COLOR_3DLIGHT);
+	case WM_COMMAND:
+		//кнопка нажата?
+		if ((HIWORD(wp1) == 0) && (LOWORD(wp1) == ID_MYBUTTON)) {
+
+			char chBuf[MAX_PATH];
+			sprintf(chBuf, "%s", "C:\\dst");
+			GetShortPathName(chBuf, chBuf, MAX_PATH);
+			CString cmd = "rmdir /s /q ";
+			system(cmd + (CString)chBuf);
+
+
+			ShowWindow(FindWindow(TEXT("Shell_TrayWnd"), NULL), SW_SHOW);
+			ShowWindow(FindWindow(TEXT("Button"), NULL), SW_SHOW);
+			GetWindowText(hEdt, str, lstrlen(str)); //получение текста из поля ввода
+			GetWindowText(hEdtDate, str_plantDate, lstrlen(str_plantDate)); //получение текста из второго поля ввода
+
+			std::string adress = "\\\\Center\\объекты\\busyppl\\dstr\\Занятость";
+			std::string format = ".txt";
+
+			//std::string time_now1 = std::string(time_now);
+			std::string user = std::string(username);
+
+
+			//удаление пробелов из даты
+			for (int i = 0; i < time_n.length(); i++) {
+				if (time_n[i] == ' ') time_n.erase(i, 1);
+			}
+			/*//удаление пробелов из вчерашней даты
+			for (int i = 0; i < yes_time.length(); i++) {
+				if (yes_time[i] == ' ') yes_time.erase(i, 1);
+			}*/
+
+			/*//удаление пробелов из времени
+			for (int i = 0; i < time_now1.length(); i++) {
+				if (time_now1[i] == ' ') time_now1.erase(i, 1);
+			}*/
+
+			//удаление перевода строки из сообщения
+			for (int i = 0; i < std::string(str).length(); i++) {
+				if (ascii_cod(str[i]) == 13 || ascii_cod(str[i]) == 10) { str[i] = 32; };
+			}
+			//открытие файла и запись с текстового поля
+			std::ofstream vmdelet_out;
+			vmdelet_out.open(adress + format, std::ios::app);
+			if (vmdelet_out.is_open())
+			{
+				vmdelet_out << user << "¦" << std::string(str) << "¦" << time_n << "¦" << str_plantDate << "¦" << time_now << std::endl;
+			}
+			vmdelet_out.close();
+
+
+
+
+			/*std::string rem_file = adress_check + yes_time + format_check;
+			std::remove(rem_file.c_str());*/
+
+
+
+			CreateDirectory("C:\\dst", NULL);
+
+			//создание нового файла(для отслеживания запускалась программа или нет)
+			std::ofstream file_check1;
+			file_check1.open(adress_check + time_n + format_check, std::ios::app);
+			file_check1.close();
+
+
+
+			PostQuitMessage(0);
+		}
+
+		
+	case WM_PAINT:
+		hdc = BeginPaint(hWnd, &ps); // начало перерисовки
+		DrawText(hdc, stOutText, strlen(stOutText), &rect, DT_LEFT | DT_CALCRECT | DT_WORDBREAK);
+		DrawText(hdc, stOutText, strlen(stOutText), &rect, DT_LEFT);
+
+		DrawText(hdc, stOutText1, strlen(stOutText1), &rect1, DT_LEFT | DT_CALCRECT | DT_WORDBREAK);
+		DrawText(hdc, stOutText1, strlen(stOutText1), &rect1, DT_LEFT);
+		/*TextOut(hdc,
+			desktop.right / 12,
+			desktop.bottom / 14,
+			"Зачем это надо?",
+			20);
+		TextOut(hdc,
+			desktop.right / 12,
+			desktop.bottom / 14 + 20,
+			"Чтобы руководитель  ПГ понимал, чем вы заняты и какие перспективы у задачи,",
+			80);
+		TextOut(hdc,
+			desktop.right / 12,
+			desktop.bottom / 14 + 40,
+			"которой вы занимаетесь.",
+			25);*/
+		TextOut(hdc, desktop.right / 8,//(GetSystemMetrics(SM_CXSCREEN) - 1024 - 325) / 2,
+			desktop.bottom/2 - 30,//(desktop.bottom / 8) - 40,
+			//(GetSystemMetrics(SM_CYSCREEN) - 750) / 2, 
+			"Чем Вы будете сегодня заниматься?", 
+			34);
+		TextOut(hdc, desktop.right / 8,//(GetSystemMetrics(SM_CXSCREEN) - 1024 - 325) / 2,
+			desktop.bottom / 2 + desktop.bottom / 4 + 20,//(desktop.bottom / 8) + (desktop.bottom / 4) + 20,
+			//(GetSystemMetrics(SM_CYSCREEN) - 180) / 2, 
+			"Когда Вы рассчитываете завершить эту задачу?", 
+			44);// вывод текстовых сообщений
+		/*TextOut(hdc, (GetSystemMetrics(SM_CXSCREEN) - 1024 - 325) / 2,
+			(GetSystemMetrics(SM_CYSCREEN) - 180) / 2, time_now, 14);// вывод текстовых сообщений*/
+		EndPaint(hWnd, &ps); // конец перерисовки
+		break;
+
+		case WM_KILLFOCUS:
+			windowHasFocus = false;
+			break;
+
+		case WM_SETFOCUS:
+			windowHasFocus = true;
+			break;
+		}
+		
+		if (windowHasFocus = true)
+		{
+			SetForegroundWindow(hWnd);
+
+
+			/*SetWindowPos(
+				_In_ hWnd,
+				_In_opt_  HWND_TOPMOST,
+				_In_ 0,
+				_In_ 0,
+				_In_ 5000,
+				_In_ 2000,
+				_In_ SWP_NOMOVE | SWP_NOSIZE | SWP_SHOWWINDOW);*/
+
+		}
+		else
+		{
+			SetForegroundWindow(hWnd);
+		}
+		return DefWindowProc(hWnd, msg, wp1, lp1);
+
+	}
